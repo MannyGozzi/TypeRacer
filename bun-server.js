@@ -20,6 +20,21 @@ const sampleTexts = [
   "Code is like humor. When you have to explain it, it's bad. The computer was born to solve problems that did not exist before."
 ]
 
+const playerColors = [
+  '#3B82F6', // Blue
+  '#EF4444', // Red  
+  '#10B981', // Green
+  '#F59E0B', // Yellow
+  '#8B5CF6', // Purple
+  '#EC4899', // Pink
+  '#06B6D4', // Cyan
+  '#F97316', // Orange
+]
+
+function getPlayerColor(index) {
+  return playerColors[index % playerColors.length]
+}
+
 function broadcastGameState(server) {
   const message = JSON.stringify({
     type: 'gameState',
@@ -63,7 +78,8 @@ function resetGame(server) {
       ...player,
       progress: 0,
       wpm: 0,
-      isFinished: false
+      isFinished: false,
+      cursorPosition: 0
     })),
     isStarted: false,
     isFinished: false,
@@ -130,7 +146,9 @@ const server = Bun.serve({
               name: data.data.playerName,
               progress: 0,
               wpm: 0,
-              isFinished: false
+              isFinished: false,
+              cursorPosition: 0,
+              color: getPlayerColor(gameState.players.length)
             }
             
             gameState.players.push(newPlayer)
@@ -157,6 +175,7 @@ const server = Bun.serve({
                 player.progress = data.data.progress
                 player.wpm = data.data.wpm
                 player.isFinished = data.data.isFinished
+                player.cursorPosition = data.data.cursorPosition || 0
                 
                 broadcastGameState(server)
                 

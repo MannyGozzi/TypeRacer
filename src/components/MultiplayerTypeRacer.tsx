@@ -13,6 +13,8 @@ interface Player {
   progress: number;
   wpm: number;
   isFinished: boolean;
+  cursorPosition: number;
+  color: string;
 }
 
 interface GameState {
@@ -31,6 +33,7 @@ export default function MultiplayerTypeRacer() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [isJoined, setIsJoined] = useState(false);
+  const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Focus management for multiplayer
@@ -70,6 +73,7 @@ export default function MultiplayerTypeRacer() {
           break;
         case 'playerJoined':
           setIsJoined(true);
+          setCurrentPlayerId(message.data.playerId);
           break;
         default:
           console.log('Unknown message type:', message.type);
@@ -129,7 +133,8 @@ export default function MultiplayerTypeRacer() {
       data: {
         progress,
         wpm,
-        isFinished: newIndex >= gameState.text.length
+        isFinished: newIndex >= gameState.text.length,
+        cursorPosition: newIndex
       }
     });
   };
@@ -137,10 +142,14 @@ export default function MultiplayerTypeRacer() {
   const renderText = () => {
     if (!gameState) return null;
 
+    // Get current player using the stored player ID
+    const currentPlayer = gameState.players.find(p => p.id === currentPlayerId);
+
     return gameState.text.split('').map((char, index) => {
       let className = "text-gray-500";
       let displayChar = char;
       
+      // Current player's typed characters
       if (index < userInput.length) {
         if (userInput[index] === char) {
           className = "text-white";
@@ -152,10 +161,26 @@ export default function MultiplayerTypeRacer() {
       } else if (index === userInput.length) {
         className = "text-gray-500 bg-white/20 animate-pulse";
       }
+
+      // Other players' cursors
+      const otherPlayerCursors = gameState.players
+        .filter(p => p.id !== currentPlayer?.id && p.cursorPosition === index)
+        .map((player, idx) => (
+          <div
+            key={`cursor-${player.id}`}
+            className="absolute -top-1 -bottom-1 left-0 w-0.5 animate-pulse"
+            style={{ 
+              backgroundColor: player.color,
+              zIndex: 10 + idx
+            }}
+            title={player.name}
+          />
+        ));
       
       return (
-        <span key={index} className={`${className} transition-all duration-150 relative`}>
-          {displayChar}
+        <span key={index} className={`${className} transition-all duration-150 relative inline-block`}>
+          {displayChar === ' ' ? '\u00A0' : displayChar}
+          {otherPlayerCursors}
         </span>
       );
     });
