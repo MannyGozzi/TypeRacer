@@ -59,7 +59,6 @@ export default function MultiplayerTypeRacer() {
   }, [gameState?.isStarted, gameState?.isFinished]);
 
   const { isConnected, connectionError, sendMessage } = useWebSocket({
-    url: 'ws://localhost:3002/ws',
     onMessage: (message) => {
       switch (message.type) {
         case 'gameState':

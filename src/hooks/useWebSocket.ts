@@ -36,11 +36,19 @@ export function useWebSocket({
     const getWebSocketUrl = () => {
       if (url) return url;
       
-      if (typeof window === 'undefined') return 'ws://localhost:3000/ws';
+      if (typeof window === 'undefined') return 'ws://localhost:3002/ws';
       
+      // In production, use the same host but port 3002
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.host;
-      return `${protocol}//${host}/ws`;
+      const hostname = window.location.hostname;
+      
+      // For localhost development, use port 3002
+      if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        return `${protocol}//${hostname}:3002/ws`;
+      }
+      
+      // For production, assume WebSocket server is on port 3002
+      return `${protocol}//${hostname}:3002/ws`;
     };
 
     // Check if WebSocket is available in the browser
