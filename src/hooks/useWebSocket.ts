@@ -1,0 +1,146 @@
+"use client";
+
+import { useEffect, useRef, useState } from 'react';
+
+interface WebSocketMessage {
+  type: string;
+  data: any;
+}
+
+interface UseWebSocketOptions {
+  url?: string;
+  onMessage?: (message: WebSocketMessage) => void;
+  onConnect?: () => void;
+  onDisconnect?: () => void;
+  reconnectAttempts?: number;
+  reconnectInterval?: number;
+}
+
+export function useWebSocket({
+  url,
+  onMessage,
+  onConnect,
+  onDisconnect,
+  reconnectAttempts = 5,
+  reconnectInterval = 3000
+}: UseWebSocketOptions = {}) {
+  // Dynamically construct WebSocket URL based on current location
+  const getWebSocketUrl = () => {
+    if (url) return url;
+    
+    if (typeof window === 'undefined') return 'ws://localhost:3000/ws';
+    
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.host;
+    return `${protocol}//${host}/ws`;
+  };
+  const [socket, setSocket] = useState<WebSocket | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [reconnectCount, setReconnectCount] = useState(0);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
+  const shouldReconnectRef = useRef(true);
+
+  const connect = () => {
+    // Check if WebSocket is available in the browser
+    if (typeof window === 'undefined' || !window.WebSocket) {
+      setConnectionError('WebSocket is not supported in this environment');
+      return;
+    }
+
+    try {
+      setConnectionError(null);
+      const wsUrl = getWebSocketUrl();
+      console.log('Connecting to WebSocket:', wsUrl);
+      const ws = new WebSocket(wsUrl);
+      
+      ws.onopen = () => {
+        setIsConnected(true);
+        setReconnectCount(0);
+        setSocket(ws);
+        setConnectionError(null);
+        onConnect?.();
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          onMessage?.(message);
+        } catch (error) {
+          console.warn('Failed to parse WebSocket message:', error);
+        }
+      };
+
+      ws.onclose = (event) => {
+        setIsConnected(false);
+        setSocket(null);
+        onDisconnect?.();
+
+        // Only show error if it's not a normal close
+        if (event.code !== 1000 && event.code !== 1001) {
+          setConnectionError(`Connection closed: ${event.reason || 'Unknown reason'}`);
+        }
+
+        if (shouldReconnectRef.current && reconnectCount < reconnectAttempts) {
+          reconnectTimeoutRef.current = setTimeout(() => {
+            setReconnectCount(prev => prev + 1);
+            connect();
+          }, reconnectInterval);
+        }
+      };
+
+      ws.onerror = () => {
+        // Don't log the error object as it's often empty
+        // The real error info usually comes in the close event
+        setConnectionError('Failed to connect to WebSocket server');
+      };
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setConnectionError(`Failed to create WebSocket connection: ${errorMessage}`);
+      console.error('WebSocket connection error:', errorMessage);
+    }
+  };
+
+  const disconnect = () => {
+    shouldReconnectRef.current = false;
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+    }
+    if (socket) {
+      socket.close();
+    }
+  };
+
+  const sendMessage = (message: WebSocketMessage) => {
+    if (socket && isConnected) {
+      socket.send(JSON.stringify(message));
+    } else {
+      console.warn('WebSocket is not connected');
+    }
+  };
+
+  useEffect(() => {
+    connect();
+
+    return () => {
+      shouldReconnectRef.current = false;
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      if (socket) {
+        socket.close();
+      }
+    };
+  }, []);
+
+  return {
+    socket,
+    isConnected,
+    connectionError,
+    sendMessage,
+    connect,
+    disconnect,
+    reconnectCount
+  };
+}
