@@ -9,8 +9,7 @@
     "build": "bun --bun next build --turbopack",
     "start": "bun --bun next start",
     "lint": "bun eslint",
-    "server": "bun bun-server.js",
-    "install": "bun install"
+    "server": "bun bun-server.js"
   },
   "dependencies": {
     "@radix-ui/react-progress": "^1.1.7",
