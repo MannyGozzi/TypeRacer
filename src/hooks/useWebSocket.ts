@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 
 interface WebSocketMessage {
   type: string;
-  data: any;
+  data: unknown;
 }
 
 interface UseWebSocketOptions {
@@ -24,24 +24,25 @@ export function useWebSocket({
   reconnectAttempts = 5,
   reconnectInterval = 3000
 }: UseWebSocketOptions = {}) {
-  // Dynamically construct WebSocket URL based on current location
-  const getWebSocketUrl = () => {
-    if (url) return url;
-    
-    if (typeof window === 'undefined') return 'ws://localhost:3000/ws';
-    
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
-    return `${protocol}//${host}/ws`;
-  };
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [reconnectCount, setReconnectCount] = useState(0);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const shouldReconnectRef = useRef(true);
 
-  const connect = () => {
+  const connect = useCallback(() => {
+    // Dynamically construct WebSocket URL based on current location
+    const getWebSocketUrl = () => {
+      if (url) return url;
+      
+      if (typeof window === 'undefined') return 'ws://localhost:3000/ws';
+      
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      return `${protocol}//${host}/ws`;
+    };
+
     // Check if WebSocket is available in the browser
     if (typeof window === 'undefined' || !window.WebSocket) {
       setConnectionError('WebSocket is not supported in this environment');
@@ -100,7 +101,7 @@ export function useWebSocket({
       setConnectionError(`Failed to create WebSocket connection: ${errorMessage}`);
       console.error('WebSocket connection error:', errorMessage);
     }
-  };
+  }, [onMessage, onConnect, onDisconnect, reconnectCount, reconnectAttempts, reconnectInterval, url]);
 
   const disconnect = () => {
     shouldReconnectRef.current = false;
@@ -132,6 +133,7 @@ export function useWebSocket({
         socket.close();
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return {

@@ -1,10 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
 import { useWebSocket } from "@/hooks/useWebSocket";
 
 interface Player {
@@ -30,7 +27,7 @@ export default function MultiplayerTypeRacer() {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [playerName, setPlayerName] = useState("");
   const [userInput, setUserInput] = useState("");
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [, setCurrentIndex] = useState(0);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [isJoined, setIsJoined] = useState(false);
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
@@ -66,14 +63,14 @@ export default function MultiplayerTypeRacer() {
     onMessage: (message) => {
       switch (message.type) {
         case 'gameState':
-          setGameState(message.data);
+          setGameState(message.data as GameState);
           break;
         case 'gameStarted':
           setStartTime(Date.now());
           break;
         case 'playerJoined':
           setIsJoined(true);
-          setCurrentPlayerId(message.data.playerId);
+          setCurrentPlayerId((message.data as { playerId: string }).playerId);
           break;
         default:
           console.log('Unknown message type:', message.type);
@@ -178,8 +175,8 @@ export default function MultiplayerTypeRacer() {
         ));
       
       return (
-        <span key={index} className={`${className} transition-all duration-150 relative inline-block`}>
-          {displayChar === ' ' ? '\u00A0' : displayChar}
+        <span key={index} className={`${className} transition-all duration-150 relative`}>
+          {displayChar}
           {otherPlayerCursors}
         </span>
       );
@@ -266,30 +263,33 @@ export default function MultiplayerTypeRacer() {
     <div className="min-h-screen bg-gray-900 text-white p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header with player count */}
-        <div className="text-center mb-8">
-          <div className="flex justify-center items-center space-x-4 mb-6">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-yellow-400">{gameState?.players.length || 0}</div>
-              <div className="text-sm text-gray-400">Players</div>
+        {gameState?.players && gameState.players.length > 0 && (
+          <div className="text-center mb-8">
+            <div className="flex justify-center items-center space-x-4 mb-6">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-yellow-400">{gameState.players.length}</div>
+                <div className="text-sm text-gray-400">Players</div>
+              </div>
+              {gameState?.isStarted && (
+                <>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-green-400">Racing</div>
+                    <div className="text-sm text-gray-400">Status</div>
+                  </div>
+                </>
+              )}
             </div>
-            {gameState?.isStarted && (
-              <>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-green-400">Racing</div>
-                  <div className="text-sm text-gray-400">Status</div>
-                </div>
-              </>
-            )}
           </div>
-        </div>
+        )}
 
         {/* Players List */}
-        <div className="bg-gray-800 rounded-lg p-6 mb-8">
-          <div className="text-center mb-4">
-            <span className="text-gray-400 text-sm">players in lobby</span>
-          </div>
-          <div className="space-y-3">
-            {gameState?.players.map((player, index) => (
+        {gameState?.players && gameState.players.length > 0 && (
+          <div className="bg-gray-800 rounded-lg p-6 mb-8">
+            <div className="text-center mb-4">
+              <span className="text-gray-400 text-sm">players in lobby</span>
+            </div>
+            <div className="space-y-3">
+              {gameState.players.map((player, index) => (
               <div key={player.id} className="flex items-center justify-between p-4 bg-gray-700 rounded-lg">
                 <div className="flex items-center space-x-4">
                   <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center text-gray-900 font-bold text-sm">
@@ -320,9 +320,10 @@ export default function MultiplayerTypeRacer() {
                   </div>
                 </div>
               </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Game Area */}
         <div className="bg-gray-800 rounded-lg p-8 mb-8">
@@ -330,7 +331,7 @@ export default function MultiplayerTypeRacer() {
             <div className="text-center">
               <span className="text-gray-400 text-sm">multiplayer race</span>
             </div>
-            {!gameState?.isStarted && !gameState?.countdown && (
+            {!gameState?.isStarted && (!gameState?.countdown || gameState.countdown === 0) && (
               <Button 
                 onClick={startGame}
                 className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold px-6 py-2"
@@ -340,7 +341,7 @@ export default function MultiplayerTypeRacer() {
             )}
           </div>
 
-          {gameState?.countdown > 0 && (
+          {gameState?.countdown !== undefined && gameState.countdown > 0 && (
             <div className="text-center mb-8">
               <div className="text-6xl font-bold text-yellow-400 mb-2">
                 {gameState.countdown}
@@ -349,10 +350,10 @@ export default function MultiplayerTypeRacer() {
             </div>
           )}
 
-          {gameState?.text && (
+          {gameState?.text && gameState?.players && gameState.players.length > 0 && (
             <>
               <div 
-                className="text-2xl leading-relaxed font-mono tracking-wide text-center max-w-4xl mx-auto mb-8 cursor-text"
+                className="text-2xl leading-relaxed font-mono tracking-wide text-center max-w-4xl mx-auto mb-8 cursor-text break-words"
                 onClick={() => inputRef.current?.focus()}
               >
                 {renderText()}
@@ -364,12 +365,14 @@ export default function MultiplayerTypeRacer() {
                 value={userInput}
                 onChange={handleInputChange}
                 disabled={!gameState.isStarted || gameState.isFinished}
-                className="opacity-0 absolute top-0 left-0 w-1 h-1 pointer-events-none"
+                className="absolute opacity-0 pointer-events-none"
                 style={{ 
                   position: 'fixed', 
-                  top: '-9999px', 
-                  left: '-9999px',
-                  zIndex: -1
+                  top: '50%', 
+                  left: '50%',
+                  width: '1px',
+                  height: '1px',
+                  zIndex: 1000
                 }}
                 autoFocus
               />

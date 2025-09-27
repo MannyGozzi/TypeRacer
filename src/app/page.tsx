@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import TypeRacer from "@/components/TypeRacer";
 import MultiplayerTypeRacer from "@/components/MultiplayerTypeRacer";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 
 export default function Home() {
   const [mode, setMode] = useState<'single' | 'multiplayer'>('single');

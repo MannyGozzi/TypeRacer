@@ -1,10 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
 
 interface TypeRacerProps {
   text?: string;
@@ -15,7 +12,7 @@ export default function TypeRacer({
   text = "The quick brown fox jumps over the lazy dog. This is a sample text for typing practice.",
   onComplete 
 }: TypeRacerProps) {
-  const [currentText, setCurrentText] = useState(text);
+  const [currentText] = useState(text);
   const [userInput, setUserInput] = useState("");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [startTime, setStartTime] = useState<number | null>(null);
@@ -79,7 +76,7 @@ export default function TypeRacer({
         });
       }
     }
-  }, [currentIndex, currentText.length, isComplete, startTime, errors, onComplete]);
+  }, [currentIndex, currentText, isComplete, startTime, errors, onComplete]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -185,7 +182,7 @@ export default function TypeRacer({
             <span className="text-gray-400 text-sm">english</span>
           </div>
           
-          <div className="text-2xl leading-relaxed font-mono tracking-wide text-center max-w-4xl mx-auto">
+          <div className="text-2xl leading-relaxed font-mono tracking-wide text-center max-w-4xl mx-auto break-words">
             {renderText()}
           </div>
         </div>
